@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>腾讯云 COS 上传测试工具</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['"DM Sans"', 'system-ui', 'sans-serif'] },
+          },
+        },
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen bg-slate-100 font-sans text-slate-800 antialiased">
+    <div class="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <header class="mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+          腾讯云 COS 上传测试工具
+        </h1>
+        <p class="mt-1 text-sm text-slate-500">
+          配置存储桶与临时密钥，选择文件后点击上传，支持禁止覆盖与结果详情查看
+        </p>
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        <!-- 配置 -->
+        <section class="flex flex-col gap-5">
+          <div class="rounded-xl bg-white shadow-sm border border-slate-200/80 p-5 sm:p-6">
+            <h2 class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4">
+              配置
+            </h2>
+            <div class="space-y-4">
+              <div>
+                <label for="bucket" class="block text-sm font-medium text-slate-600 mb-1">Bucket</label>
+                <input
+                  id="bucket"
+                  type="text"
+                  name="bucket"
+                  class="block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder="bucket-111111111"
+                />
+                <p class="mt-1 text-xs text-slate-400">
+                  由 bucketname-appid 组成，可在
+                  <a class="text-blue-600 hover:text-blue-700 hover:underline" href="https://console.cloud.tencent.com/cos5/bucket" target="_blank" rel="noopener">COS 控制台</a>
+                  查看
+                </p>
+              </div>
+
+              <div>
+                <label for="region" class="block text-sm font-medium text-slate-600 mb-1">Region</label>
+                <input
+                  id="region"
+                  type="text"
+                  name="region"
+                  class="block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder="ap-guangzhou"
+                  value="ap-guangzhou"
+                />
+                <p class="mt-1 text-xs text-slate-400">
+                  存储桶概览页可查看 Region
+                </p>
+              </div>
+
+              <div>
+                <label for="secret_id" class="block text-sm font-medium text-slate-600 mb-1">SecretId</label>
+                <input
+                  id="secret_id"
+                  type="text"
+                  name="secret_id"
+                  class="block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder="AKID..."
+                />
+              </div>
+
+              <div>
+                <label for="secret_key" class="block text-sm font-medium text-slate-600 mb-1">SecretKey</label>
+                <input
+                  id="secret_key"
+                  type="text"
+                  name="secret_key"
+                  class="block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder="密钥"
+                />
+              </div>
+
+              <div>
+                <label for="security_token" class="block text-sm font-medium text-slate-600 mb-1">SecurityToken</label>
+                <textarea
+                  id="security_token"
+                  name="security_token"
+                  rows="4"
+                  class="block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono"
+                ></textarea>
+              </div>
+
+              <div class="pt-2 border-t border-slate-100">
+                <label for="json-paste" class="block text-sm font-medium text-slate-600 mb-1">从 JSON 粘贴</label>
+                <textarea
+                  id="json-paste"
+                  rows="6"
+                  class="auto-save-ignore block w-full rounded-lg border-slate-300 text-sm shadow-sm font-mono placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  placeholder='粘贴完整配置 JSON（含 bucket、region、secret_id、secret_key、token 等）'
+                ></textarea>
+                <div class="mt-2 flex flex-wrap gap-2">
+                  <button
+                    id="json-apply-btn"
+                    type="button"
+                    class="px-4 py-2 text-sm font-medium rounded-lg bg-slate-700 text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+                  >
+                    填入配置
+                  </button>
+                  <button
+                    id="json-copy-btn"
+                    type="button"
+                    class="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                  >
+                    复制当前配置
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 文件与结果 -->
+        <section class="flex flex-col gap-5">
+          <div class="rounded-xl bg-white shadow-sm border border-slate-200/80 p-5 sm:p-6">
+            <h2 class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4">
+              文件
+            </h2>
+            <div class="space-y-4">
+              <div>
+                <label for="key" class="block text-sm font-medium text-slate-600 mb-1">目标路径</label>
+                <input
+                  id="key"
+                  type="text"
+                  name="key"
+                  class="block w-full rounded-lg border-slate-300 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono"
+                  placeholder="/images/2024/10/31/demo.jpg"
+                />
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input
+                  id="forbid-overwrite"
+                  type="checkbox"
+                  class="auto-save-ignore h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label for="forbid-overwrite" class="text-xs text-slate-600">
+                  禁止覆盖已存在对象（发送 x-cos-forbid-overwrite: true）
+                </label>
+              </div>
+
+              <div>
+                <label for="file-selector" class="block text-sm font-medium text-slate-600 mb-1">选择文件</label>
+                <input
+                  id="file-selector"
+                  type="file"
+                  class="auto-save-ignore block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+                />
+                <p class="mt-1.5 text-xs text-slate-400" id="file-selected-hint">
+                  选择后点击「上传」按钮，支持图片、视频、音频、文档等
+                </p>
+                <button
+                  id="upload-btn"
+                  type="button"
+                  class="mt-3 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
+                  disabled
+                >
+                  上传
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-white shadow-sm border border-slate-200/80 p-5 sm:p-6 flex-1 min-h-[200px]">
+            <h2 class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3">
+              结果
+            </h2>
+            <pre
+              id="result"
+              class="block w-full min-h-[180px] rounded-lg bg-slate-50 border border-slate-200 text-xs p-4 font-mono text-slate-700 whitespace-pre-wrap break-words overflow-auto"
+            ></pre>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/cos-js-sdk-v5/dist/cos-js-sdk-v5.min.js"></script>
+    <script>
+      var taskId;
+
+      // 表单填写时自动保存到 localStorage
+      document
+        .querySelectorAll("input:not(.auto-save-ignore), textarea[name]")
+        .forEach((el) => {
+          const stored = localStorage.getItem(el.name);
+          if (stored !== null) {
+            el.value = stored;
+          }
+          el.oninput = function () {
+            localStorage.setItem(el.name, el.value);
+          };
+        });
+
+      // 从 JSON 填入配置（支持 bucket、region、secret_id、secret_key、token、prefix）
+      document.getElementById("json-apply-btn").onclick = function () {
+        const raw = document.getElementById("json-paste").value.trim();
+        if (!raw) {
+          alert("请先粘贴 JSON 内容");
+          return;
+        }
+        let data;
+        try {
+          data = JSON.parse(raw);
+        } catch (e) {
+          alert("JSON 格式错误：" + e.message);
+          return;
+        }
+        const set = function (name, value) {
+          if (value == null || value === "") return;
+          const el = document.querySelector("[name=" + name + "]");
+          if (!el) return;
+          el.value = String(value);
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+        };
+        set("bucket", data.bucket);
+        set("region", data.region);
+        set("secret_id", data.secret_id);
+        set("secret_key", data.secret_key);
+        set("security_token", data.token);
+        if (data.prefix != null && data.prefix !== "") {
+          set("key", data.prefix);
+        }
+        resultContainer.classList.remove("text-red-500", "text-green-500");
+        resultContainer.innerText = "已从 JSON 填入配置";
+      };
+
+      // 一键复制当前配置为 JSON（格式与从 JSON 粘贴一致）
+      document.getElementById("json-copy-btn").onclick = async function () {
+        const getVal = function (name) {
+          const el = document.querySelector("[name=" + name + "]");
+          return el ? el.value : "";
+        };
+        const data = {
+          bucket: getVal("bucket") || "",
+          region: getVal("region") || "",
+          secret_id: getVal("secret_id") || "",
+          secret_key: getVal("secret_key") || "",
+          token: getVal("security_token") || "",
+          prefix: getVal("key") || "",
+        };
+        const json = JSON.stringify(data, null, 2);
+
+        try {
+          await navigator.clipboard.writeText(json);
+          resultContainer.classList.remove("text-red-500");
+          resultContainer.classList.add("text-green-500");
+          resultContainer.innerText = "已复制当前配置到剪贴板：\n\n" + json;
+        } catch (e) {
+          resultContainer.classList.remove("text-green-500");
+          resultContainer.classList.add("text-red-500");
+          resultContainer.innerText =
+            "复制到剪贴板失败，请手动复制下方内容：\n\n" + json;
+        }
+      };
+
+      const resultContainer = document.getElementById("result");
+
+      const fileSelector = document.getElementById("file-selector");
+      const uploadBtn = document.getElementById("upload-btn");
+      const fileSelectedHint = document.getElementById("file-selected-hint");
+
+      // 选择文件：仅更新状态与提示，不自动上传
+      fileSelector.onchange = function () {
+        var file = this.files[0];
+        uploadBtn.disabled = !file;
+        if (file) {
+          fileSelectedHint.textContent = "已选择: " + file.name + "，点击「上传」按钮开始上传";
+        } else {
+          fileSelectedHint.textContent =
+            "选择要上传的文件，支持图片、视频、音频、文档等，选择后点击「上传」按钮";
+        }
+      };
+
+      // 点击上传按钮时执行上传
+      uploadBtn.onclick = function () {
+        var file = fileSelector.files[0];
+        if (!file) return;
+
+        resultContainer.classList.remove("text-red-500", "text-green-500");
+
+        const Bucket = document.querySelector("[name=bucket]").value;
+        const Region = document.querySelector("[name=region]").value;
+        const SecretId = document.querySelector("[name=secret_id]").value;
+        const SecretKey = document.querySelector("[name=secret_key]").value;
+        const SecurityToken = document.querySelector(
+          "[name=security_token]"
+        ).value;
+        var forbidOverwrite = document.getElementById("forbid-overwrite")?.checked;
+
+        if (!Bucket || !Region || !SecretId || !SecretKey) {
+          alert("请完整填写 Bucket、Region、SecretId、SecretKey");
+          return;
+        }
+
+        const cosConfig = {
+          SecretId: SecretId,
+          SecretKey: SecretKey,
+        };
+        if (SecurityToken) {
+          cosConfig.SecurityToken = SecurityToken;
+        }
+        const cos = new COS(cosConfig);
+
+        resultContainer.innerText = "上传中...";
+        uploadBtn.disabled = true;
+
+        var uploadOptions = {
+          Bucket: Bucket,
+          Region: Region,
+          Key: document.querySelector("[name=key]").value,
+          Body: file,
+          SliceSize: 1024 * 1024,
+          onTaskReady: function (tid) {
+            taskId = tid;
+          },
+          onProgress: function (progressData) {
+            console.log("上传中", JSON.stringify(progressData));
+          },
+        };
+        if (forbidOverwrite) {
+          uploadOptions.Headers = { "x-cos-forbid-overwrite": "true" };
+        }
+
+        cos.uploadFile(
+          uploadOptions,
+          function (err, data) {
+            uploadBtn.disabled = !fileSelector.files[0];
+            var requestHeaders = forbidOverwrite
+              ? "x-cos-forbid-overwrite: true"
+              : "(未设置)";
+            function formatRespHeaders(obj) {
+              if (obj && typeof obj === "object") {
+                return Object.entries(obj).map(function (e) { return e[0] + ": " + e[1]; }).join("\n");
+              }
+              return "(未返回)";
+            }
+            if (err) {
+              console.log(err);
+              resultContainer.classList.add("text-red-500");
+              var respHeaders = formatRespHeaders(err.Headers || err.headers);
+              resultContainer.innerText =
+                "上传失败：\n\n" + (err.message || err) +
+                (err.statusCode != null ? "\nstatusCode: " + err.statusCode : "") +
+                (err.RequestId != null ? "\nRequestId: " + err.RequestId : "") +
+                "\n\n请求头:\n" + requestHeaders +
+                "\n\n响应头:\n" + respHeaders;
+              return;
+            }
+            console.log(data);
+            resultContainer.classList.add("text-green-500");
+            var respHeaders = formatRespHeaders(data.Headers || data.headers);
+            resultContainer.innerText =
+              "上传成功：\n\nETag: " + data.ETag +
+              "\nLocation: https://" + data.Location +
+              "\nRequestId: " + data.RequestId +
+              "\n\n请求头:\n" + requestHeaders +
+              "\n\n响应头:\n" + respHeaders;
+            fileSelector.value = "";
+            fileSelectedHint.textContent =
+              "选择要上传的文件，支持图片、视频、音频、文档等，选择后点击「上传」按钮";
+            uploadBtn.disabled = true;
+          }
+        );
+      };
+    </script>
+  </body>
+</html>
+
